@@ -1,0 +1,131 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  TEACHER
+}
+
+enum enrollmentStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+model User {
+  id          Int          @id @default(autoincrement())
+  userName    String       @unique
+  firstName   String
+  lastName    String
+  email       String       @unique
+  password    String
+  role        UserRole     @default(USER)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  programs    program[]
+  enrollments enrollment[]
+  sessions    Session[]
+  announcements Announcement[]
+}
+
+model program {
+  id          Int          @id @default(autoincrement())
+  name        String
+  description String
+  imageUrl String?
+  capacity    Int          @default(30)
+  availalbeSeats Int       @default(30)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  teacher     User         @relation(fields: [teacherId], references: [id])
+  teacherId   Int
+  enrollments enrollment[]
+  sessions ProgramSession[]
+  announcements Announcement[]
+}
+
+model enrollment {
+  id              Int              @id @default(autoincrement())
+  user            User             @relation(fields: [userId], references: [id])
+  userId          Int
+  program         program          @relation(fields: [programId], references: [id])
+  programId       Int
+  enrolmentStatus enrollmentStatus @default(PENDING)
+  createdAt       DateTime         @default(now())
+
+
+  @@unique([userId, programId])
+}
+
+model Session {
+  id               Int     @id @default(autoincrement())
+  userId           Int
+  user             User    @relation(fields: [userId], references: [id])
+  refreshTokenHash String
+  userAgent        String?
+  expiresAt DateTime 
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([userId])
+}
+
+
+
+
+model Announcement {
+  id          Int      @id @default(autoincrement())
+  title       String
+  content     String
+  authorId    Int
+  programId   Int?
+  isPublished Boolean  @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  author User @relation(fields: [authorId],references: [id],onDelete: Restrict)
+
+  program program? @relation(fields: [programId],references: [id],onDelete: Cascade)
+
+  @@index([programId, isPublished])
+  @@index([isPublished, publishedAt])
+}
+
+
+
+model ProgramSession {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+
+  startTime   DateTime
+  endTime     DateTime
+
+  type        SessionType
+  location    String
+  meetingUrl  String
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  programId   Int
+  program     program  @relation(fields: [programId], references: [id], onDelete: Cascade)
+}
+
+enum SessionType {
+  IN_PERSON
+  ONLINE
+}
